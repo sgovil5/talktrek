@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Practice Buddy</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .bubble {
+            background-color: #f0f9ff;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .recording-animation {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-blue-50 min-h-screen py-8">
+    <div class="container mx-auto px-4">
+        <div class="max-w-2xl mx-auto">
+            <h1 class="text-4xl font-bold text-center text-blue-600 mb-8">Speech Practice Buddy 🎤</h1>
+            
+            <div class="bubble mb-8">
+                <h2 class="text-2xl font-semibold text-blue-700 mb-4">Choose a sentence to practice:</h2>
+                <select id="sentenceSelect" class="w-full p-3 rounded-lg border-2 border-blue-200 focus:border-blue-500 focus:outline-none text-lg">
+                    {% for sentence in sentences %}
+                    <option value="{{ sentence }}">{{ sentence }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="bubble mb-8">
+                <div id="recordingSection" class="text-center">
+                    <button id="startRecording" class="bg-green-500 text-white px-6 py-3 rounded-full text-lg font-semibold hover:bg-green-600 transition-colors">
+                        Start Recording 🎙️
+                    </button>
+                    <div id="recordingStatus" class="hidden mt-4">
+                        <div class="recording-animation inline-block">
+                            <span class="text-red-500 text-4xl">⚪</span>
+                        </div>
+                        <p class="text-gray-600 mt-2">Recording... (5 seconds)</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="results" class="hidden">
+                <div class="bubble mb-8">
+                    <h3 class="text-xl font-semibold text-blue-700 mb-2">What you said:</h3>
+                    <p id="transcription" class="text-lg text-gray-700"></p>
+                </div>
+
+                <div class="bubble">
+                    <h3 class="text-xl font-semibold text-blue-700 mb-2">How to improve:</h3>
+                    <p id="analysis" class="text-lg text-gray-700"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('startRecording').addEventListener('click', async () => {
+            const recordingSection = document.getElementById('recordingSection');
+            const recordingStatus = document.getElementById('recordingStatus');
+            const results = document.getElementById('results');
+            const startButton = document.getElementById('startRecording');
+            const selectedSentence = document.getElementById('sentenceSelect').value;
+
+            // Show recording status and hide start button
+            startButton.classList.add('hidden');
+            recordingStatus.classList.remove('hidden');
+            results.classList.add('hidden');
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `sentence=${encodeURIComponent(selectedSentence)}`
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('transcription').textContent = data.transcription;
+                    document.getElementById('analysis').textContent = data.analysis;
+                    results.classList.remove('hidden');
+                } else {
+                    alert('Sorry, something went wrong! Please try again.');
+                }
+            } catch (error) {
+                alert('Sorry, something went wrong! Please try again.');
+                console.error('Error:', error);
+            }
+
+            // Reset UI
+            startButton.classList.remove('hidden');
+            recordingStatus.classList.add('hidden');
+        });
+    </script>
+</body>
+</html> 
