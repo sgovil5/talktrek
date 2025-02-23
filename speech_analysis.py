@@ -131,12 +131,3 @@ def analyze_transcription_with_gpt(transcription_data, original_sentence, openai
     # Extract and return the analysis
     analysis = completion.choices[0].message.content.strip()
     return analysis
-# Example usage
-
-load_dotenv('keys.env')
-api_key = os.getenv("GOOGLE_API_KEY")
-openai_key = os.getenv("OPENAI_API_KEY")
-transcription_data = transcribe_audio_with_api_key("output.wav", api_key)
-analysis = analyze_transcription_with_gpt(transcription_data, sentence, openai_key)
-print(analysis)
-# record_audio("output.wav", duration=5)
