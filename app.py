@@ -1,7 +1,8 @@
 from flask import Flask, render_template, request, jsonify
 import os
-from speech_analysis import record_audio, transcribe_audio_with_api_key, analyze_transcription_with_gpt
+from speech_analysis import record_audio, transcribe_audio_with_api_key, analyze_transcription_with_gpt, generate_practice_paragraphs
 from dotenv import load_dotenv
+from threading import Thread, Event
 
 app = Flask(__name__)
 
@@ -10,38 +11,57 @@ load_dotenv('keys.env')
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Sample sentences for practice
+# Generate the practice paragraphs when the app starts
+# PRACTICE_SENTENCES = generate_practice_paragraphs(OPENAI_API_KEY)
+# print(PRACTICE_SENTENCES)
+
 PRACTICE_SENTENCES = [
-    "The quick brown fox jumps over the lazy dog.",
-    "She sells seashells by the seashore.",
-    "Peter Piper picked a peck of pickled peppers.",
-    "How much wood would a woodchuck chuck?",
-    "Red leather, yellow leather."
-]
+    """Samantha swiftly sipped her citrus smoothie while sharing stories 
+    about the playful dolphins leaping off the shimmering coast. 
+    Suddenly, a pesky seagull swooped down, snatching a sandwich from her picnic. """]
+    # Startled, she laughed and tried to scold the sneaky bird, but the words tangled up 
+    # as she blurted, "Stop, silly seagull! Savor the sandwich instead!" 
+    # Her friends chuckled, and with a smile, Samantha resolved to practice her speech, 
+    # knowing that perfecting those tricky sounds would come with time and determination."""
+
+
+recording_thread = None
+stop_event = Event()
 
 @app.route('/')
 def index():
     return render_template('index.html', sentences=PRACTICE_SENTENCES)
 
-@app.route('/analyze', methods=['POST'])
-def analyze_speech():
+@app.route('/start_recording', methods=['POST'])
+def start_recording():
+    global recording_thread, stop_event
+    stop_event.clear()
+    recording_thread = Thread(target=record_audio, args=("temp_recording.wav", stop_event))
+    recording_thread.start()
+    return jsonify({'success': True})
+
+@app.route('/stop_recording', methods=['POST'])
+def stop_recording():
+    global stop_event, recording_thread
+
     try:
+        # Signal the recording to stop
+        stop_event.set()
+        if recording_thread:
+            recording_thread.join()
+        
         # Get the selected sentence from the request
         sentence = request.form.get('sentence')
         
-        # Record audio (5 seconds duration)
-        audio_file = "temp_recording.wav"
-        record_audio(audio_file, duration=5)
-        
         # Transcribe the audio
-        transcription_data = transcribe_audio_with_api_key(audio_file, GOOGLE_API_KEY)
+        transcription_data = transcribe_audio_with_api_key("temp_recording.wav", GOOGLE_API_KEY)
         
         # Analyze the transcription
         analysis = analyze_transcription_with_gpt(transcription_data, sentence, OPENAI_API_KEY)
         
         # Clean up the temporary audio file
-        if os.path.exists(audio_file):
-            os.remove(audio_file)
+        if os.path.exists("temp_recording.wav"):
+            os.remove("temp_recording.wav")
         
         return jsonify({
             'success': True,

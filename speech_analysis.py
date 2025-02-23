@@ -9,13 +9,14 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 
-def record_audio(filename, duration=5):
+def record_audio(filename, stop_recording):
     chunk = 1024
     sample_format = pyaudio.paInt16 
     channels = 1
     fs = 44100 
 
     p = pyaudio.PyAudio()
+    frames = []
 
     print('Recording')
 
@@ -25,9 +26,7 @@ def record_audio(filename, duration=5):
                     frames_per_buffer=chunk,
                     input=True)
 
-    frames = []
-
-    for _ in range(0, int(fs / chunk * duration)):
+    while not stop_recording.is_set():
         data = stream.read(chunk)
         frames.append(data)
 
@@ -79,13 +78,13 @@ def transcribe_audio_with_api_key(file_path, api_key):
         transcription_data = []
         for result in results:
             alternative = result['alternatives'][0]
-            print(f"Transcript: {alternative['transcript']}")
-            print("Word-level confidence:")
+            # print(f"Transcript: {alternative['transcript']}")
+            # print("Word-level confidence:")
             word_confidences = []
             for word_info in alternative.get('words', []):
-                print(f"Word: {word_info['word']}, Confidence: {word_info['confidence']}")
+                # print(f"Word: {word_info['word']}, Confidence: {word_info['confidence']}")
                 word_confidences.append({
-                    "word": word_info['word'],
+                    "word": word_info['word'].lower(),
                     "confidence": word_info['confidence']
                 })
             transcription_data.append({
@@ -111,7 +110,7 @@ def analyze_transcription_with_gpt(transcription_data, original_sentence, openai
         "Please analyze the transcription and identify any differences from the original sentence. "
         "Provide a simple and friendly explanation of what the user can improve in their pronunciation. "
         "Focus on specific words or sounds that need attention and suggest easy ways to practice them."
-        "Specifically focus on the phonetics that are commonly mispronounced."
+        "Specifically focus on the phonetics that are commonly mispronounced. Don't worry about gramatical differences and focus ONLY on the phonetics."
         "Keep it short and concise, under 100 words."
     )
     
@@ -131,3 +130,25 @@ def analyze_transcription_with_gpt(transcription_data, original_sentence, openai
     # Extract and return the analysis
     analysis = completion.choices[0].message.content.strip()
     return analysis
+
+def generate_practice_paragraphs(api_key, count=1):
+    client = OpenAI(api_key=api_key)
+    paragraphs = []
+    
+    prompt = """Generate a paragraph that:
+    1. Can be read in about 20 seconds
+    2. Contains challenging sounds and combinations that people with speech impediments may struggle with
+    3. Focuses on common speech challenges like sibilants, plosives, and consonant clusters
+    Make it natural and meaningful, not just a tongue twister."""
+    
+    for _ in range(count):
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a speech therapy assistant."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        paragraphs.append(completion.choices[0].message.content.strip().lower())
+    
+    return paragraphs
