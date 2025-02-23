@@ -88,7 +88,7 @@ def transcribe_audio_with_api_key(file_path, api_key):
                     "confidence": word_info['confidence']
                 })
             transcription_data.append({
-                "transcript": alternative['transcript'],
+                "transcript": alternative['transcript'].lower(),
                 "word_confidences": word_confidences
             })
         
@@ -107,11 +107,11 @@ def analyze_transcription_with_gpt(transcription_data, original_sentence, openai
     prompt = (
         f"Original sentence: \"{original_sentence}\"\n"
         f"Transcription data: {transcription_data}\n"
-        "Please analyze the transcription and identify any differences from the original sentence. "
+        "Please analyze the transcription and identify any differences from the original sentence. For the user, pretend that you're not analyzing a transcription, but rather their speech itself."
         "Provide a simple and friendly explanation of what the user can improve in their pronunciation. "
-        "Focus on specific words or sounds that need attention and suggest easy ways to practice them."
-        "Specifically focus on the phonetics that are commonly mispronounced. Don't worry about gramatical differences and focus ONLY on the phonetics."
-        "Keep it short and concise, under 100 words."
+        "Focus on specific words or sounds that need attention and suggest easy ways to practice them. Give them specific phonetic symbols to practice"
+        "Don't worry about gramatical differences and focus ONLY on the phonetics."
+        "Keep it short and concise, under 100 words. Write in plain text, not markdown."
     )
     
     client = OpenAI(api_key=openai_api_key)
@@ -136,7 +136,7 @@ def generate_practice_paragraphs(api_key, count=1):
     paragraphs = []
     
     prompt = """Generate a paragraph that:
-    1. Can be read in about 20 seconds
+    1. Can be read in about 10s seconds. Keep it decently short.
     2. Contains challenging sounds and combinations that people with speech impediments may struggle with
     3. Focuses on common speech challenges like sibilants, plosives, and consonant clusters
     Make it natural and meaningful, not just a tongue twister."""

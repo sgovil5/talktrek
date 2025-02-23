@@ -12,17 +12,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Generate the practice paragraphs when the app starts
-# PRACTICE_SENTENCES = generate_practice_paragraphs(OPENAI_API_KEY)
-# print(PRACTICE_SENTENCES)
-
-PRACTICE_SENTENCES = [
-    """Samantha swiftly sipped her citrus smoothie while sharing stories 
-    about the playful dolphins leaping off the shimmering coast. 
-    Suddenly, a pesky seagull swooped down, snatching a sandwich from her picnic. """]
-    # Startled, she laughed and tried to scold the sneaky bird, but the words tangled up 
-    # as she blurted, "Stop, silly seagull! Savor the sandwich instead!" 
-    # Her friends chuckled, and with a smile, Samantha resolved to practice her speech, 
-    # knowing that perfecting those tricky sounds would come with time and determination."""
+PRACTICE_SENTENCES = generate_practice_paragraphs(OPENAI_API_KEY)
 
 
 recording_thread = None
@@ -57,7 +47,7 @@ def stop_recording():
         transcription_data = transcribe_audio_with_api_key("temp_recording.wav", GOOGLE_API_KEY)
         
         # Analyze the transcription
-        analysis = analyze_transcription_with_gpt(transcription_data, sentence, OPENAI_API_KEY)
+        analysis = analyze_transcription_with_gpt(transcription_data, sentence.lower(), OPENAI_API_KEY)
         
         # Clean up the temporary audio file
         if os.path.exists("temp_recording.wav"):
@@ -69,6 +59,23 @@ def stop_recording():
             'analysis': analysis
         })
         
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@app.route('/generate_practice_paragraphs', methods=['POST'])
+def generate_practice_paragraphs_route():
+    try:
+        # Generate new practice paragraphs
+        new_sentences = generate_practice_paragraphs(OPENAI_API_KEY)
+        new_sentence = new_sentences[0] if new_sentences else ""
+
+        return jsonify({
+            'success': True,
+            'newSentence': new_sentence
+        })
     except Exception as e:
         return jsonify({
             'success': False,
